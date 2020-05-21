@@ -1,6 +1,7 @@
-from .graph import Graph, GraphInternalError
+from ..graph import Graph, GraphInternalError
 from enum import Enum
 import copy
+import math
 
 
 class NodeColor(Enum):
@@ -93,5 +94,63 @@ def _count_paths(graph, src, dest, acc = 0):
   return acc
 
 
-def dijkstra(graph, ):
-  pass
+# Dijkstra shortest path
+def _initialize_single_source(graph, src_id):
+  g = copy.deepcopy(graph)
+  src = g.node(src_id)
+
+  for node in g:
+    node.attribute['distance'] = math.inf
+    node.attribute['predecessor'] = None
+
+  src.attribute['distance'] = 0
+  return g
+
+
+def _relax(src, dest):
+  dest_next_upper_bound = src.attribute['distance'] + src.get_weight(dest.id)
+  if dest.attribute['distance'] > dest_next_upper_bound:
+    dest.attribute['distance'] = dest_next_upper_bound
+    dest.attribute['predecessor'] = src.id
+
+
+def _extract_min(nodes):
+  minimal = nodes[0]
+  for node in nodes:
+    if node.attribute['distance'] <= minimal.attribute['distance']:
+      minimal = node
+  return minimal
+
+
+def _collect_shortest_path(graph, src, dest):
+  if src == dest:
+    return [ src ]
+  elif dest.attribute['predecessor'] is None:
+    return [ None ]
+  else:
+    predecessor_id = dest.attribute['predecessor']
+    prev_path = _collect_shortest_path(graph, src, graph.get_node(predecessor_id))
+    return prev_path + [ dest ]
+
+
+def _dijkstra(graph, src_id):
+  g = _initialize_single_source(graph, src_id)
+  
+  nodes = list(g.nodes)
+  while len(nodes) > 0:
+    node = _extract_min(nodes)
+    nodes.remove(node)
+    
+    for adjacent_node in g.adjacent_nodes(node.id):
+      _relax(node, adjacent_node)
+    
+  return g
+
+
+def get_shortest_path(graph, src_id, dest_id):
+  g = _dijkstra(graph, src_id)
+  src = g.node(src_id)
+  dest = g.node(dest_id)
+  path = _collect_shortest_path(g, src, dest)
+  distance = dest.attribute['distance']
+  return (path, distance)

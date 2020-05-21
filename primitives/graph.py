@@ -6,16 +6,16 @@ class GraphNode:
   def __init__(self, id):
     self._id = id
     self.attribute = dict()
-    self._adjacment_edge_weights = dict()
+    self._adjacency_edge_weights = dict()
 
   def get_weight(self, adjacment_node_id):
-    if adjacment_node_id in self._adjacment_edge_weights.keys():
-      return self._adjacment_edge_weights[adjacment_node_id]
+    if adjacment_node_id in self._adjacency_edge_weights.keys():
+      return self._adjacency_edge_weights[adjacment_node_id]
     else:
-      return None
+      raise GraphInternalError(f'Get weight: node {adjacment_node_id} is not adjacment to {self._id}')
 
   def set_weight(self, weight, adjacment_node_id):
-    self._adjacment_edge_weights[adjacment_node_id] = weight
+    self._adjacency_edge_weights[adjacment_node_id] = weight
 
   @property
   def id(self):
@@ -39,7 +39,7 @@ class GraphInternalError(Exception):
 class Graph:
   def __init__(self, size):
     self._nodes = { x: GraphNode(x) for x in range(0, size) }
-    self._adjacment = { x: set() for x in range(0, size) }
+    self._adjacency = { x: set() for x in range(0, size) }
 
   @property
   def size(self):
@@ -49,15 +49,19 @@ class Graph:
   def edges(self):
     edges = set()
     for node in self:
-      adjacment_nodes = self.get_adjacement_nodes(node.id)
-      for adjacment_node in adjacment_nodes:
+      adjacent_nodes = self.adjacent_nodes(node.id)
+      for adjacent_node in adjacent_nodes:
         src = node
-        dest = adjacment_node
+        dest = adjacent_node
         edge_candidate = ( src, dest )
         if ( dest, src ) not in edges:
           edges.add(edge_candidate)
 
     return edges
+
+  @property
+  def nodes(self):
+    return set(self._nodes.values())
 
   def __iter__(self):
     self.__iter = iter(self._nodes.values())
@@ -74,20 +78,23 @@ class Graph:
 
   def add_node(self):
     self._nodes[self.size] = GraphNode(self.size)
-    self._adjacment[self.size] = set()
+    self._adjacency[self.size] = set()
     return self
 
   def get_node(self, id):
     return self._nodes[id] if id in self else None
-    
-  def get_adjacement_nodes(self, node_id):
+
+  def node(self, id):
+    return self._nodes[id] if id in self else None
+
+  def adjacent_nodes(self, node_id):
     if node_id in self:
-      return list(self._adjacment[node_id])
+      return list(self._adjacency[node_id])
     else:
       return []
 
   def contains_edge(self, node_a, node_b):
-    res = node_a in self and node_b in self and self._nodes[node_b] in self.get_adjacement_nodes(node_a) and self._nodes[node_a] in self.get_adjacement_nodes(node_b)
+    res = node_a in self and node_b in self and self._nodes[node_b] in self.adjacent_nodes(node_a) and self._nodes[node_a] in self.adjacent_nodes(node_b)
     return res
 
   def add_edge(self, node_a, node_b, weight = 0):
@@ -99,8 +106,8 @@ class Graph:
         adjacent_node_a.set_weight(weight, node_b)
         adjacent_node_b.set_weight(weight, node_a)
 
-        self._adjacment[node_a].add(adjacent_node_b)
-        self._adjacment[node_b].add(adjacent_node_a)
+        self._adjacency[node_a].add(adjacent_node_b)
+        self._adjacency[node_b].add(adjacent_node_a)
         return True
       else:
         return False
@@ -120,7 +127,7 @@ class Graph:
 
   def print(self):
     for source in self._nodes.values():
-      print(f"Node #{source.id}:", [ (dest.id, source.get_weight(dest.id)) for dest in self.get_adjacement_nodes(source.id) ] )
+      print(f"Node #{source.id}:", [ (dest.id, source.get_weight(dest.id)) for dest in self.adjacent_nodes(source.id) ] )
 
 
 class GraphCategory(IntFlag):

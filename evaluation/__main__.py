@@ -1,11 +1,13 @@
 from primitives.graph import GraphGenerator, Graph
-from primitives.utils import find_paths
+from primitives.metrics.paths import get_shortest_path
 
 
-
-
-graph = GraphGenerator.create(6)
+graph = GraphGenerator.create(4)
 graph.print()
 
-paths = find_paths(graph, 0, 3)
-print(paths)
+path, d = get_shortest_path(graph, 0, 3)
+print([ node.id for node in path ])
+print("Minimal distance is", d)
+
+
+
