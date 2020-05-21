@@ -1,10 +1,12 @@
 import random
+import pickle
 from enum import IntFlag
 
-class AdjacmentNode:
+class GraphNode:
   def __init__(self, id, edge_weight = 0):
     self._id = id
     self._edge_weight = edge_weight
+    self.attribute = dict()
 
   @property
   def weight(self):
@@ -31,7 +33,7 @@ class GraphInternalError(Exception):
 
 class Graph:
   def __init__(self, size):
-    self._adjacment = { x: set() for x in range(0, size) }
+    self._adjacment = { x: ( GraphNode(x), set() ) for x in range(0, size) }
 
   @property
   def size(self):
@@ -42,7 +44,7 @@ class Graph:
     edges = set()
     for id in self._adjacment.keys():
       src = id
-      for node in self._adjacment[id]:
+      for node in self.get_adjacement_nodes(src):
         dest = node.id
         edge = (src, dest, node.weight)
         if not (dest, src, node.weight) in edges:
@@ -56,12 +58,12 @@ class Graph:
     return self.__contains__(node_id)
 
   def add_node(self):
-    self._adjacment[self.size] = set()
+    self._adjacment[self.size] = ( GraphNode(self.size), set() ) 
     return self
     
   def get_adjacement_nodes(self, node_id):
     if node_id in self:
-      return list(self._adjacment[node_id])
+      return list(self._adjacment[node_id][1])
     else:
       return []
 
@@ -71,19 +73,30 @@ class Graph:
   def add_edge(self, node_a, node_b, weight = 0):
     if node_a in self and node_b in self:
       if not self.contains_edge(node_a, node_b):
-        adjacent_node_a = AdjacmentNode(node_a, weight)
-        adjacent_node_b = AdjacmentNode(node_b, weight)
-        self._adjacment[node_a].add(adjacent_node_b)
-        self._adjacment[node_b].add(adjacent_node_a)
+        adjacent_node_a = GraphNode(node_a, weight)
+        adjacent_node_b = GraphNode(node_b, weight)
+        self._adjacment[node_a][1].add(adjacent_node_b)
+        self._adjacment[node_b][1].add(adjacent_node_a)
         return True
       else:
         return False
     else:
       raise GraphInternalError(f"Nodes {node_a} or {node_b} do not belong to the graph")
 
+  def save_to_file(self, filename="graph.pkl"):
+    with open(filename, 'wb') as output:
+      pickle.dump(self, output, pickle.HIGHEST_PROTOCOL)
+
+  @staticmethod
+  def load(filename):
+    graph = None
+    with open(filename, 'rb') as input:
+      graph = pickle.load(input)
+    return graph
+
   def print(self):
     for id in self._adjacment.keys():
-      print(f"Node #{id}:", [ str(x) for x in self._adjacment[id] ] )
+      print(f"Node #{id}:", [ str(x) for x in self.get_adjacement_nodes(id) ] )
 
 
 class GraphCategory(IntFlag):
@@ -105,7 +118,7 @@ class GraphCategorySet:
 class GraphGenerator:
   
   @staticmethod
-  def create(size, presets=('loops', 'connected'), max_weight=100):
+  def create(size, presets=('weighted', 'connected'), max_weight=100):
     preset = GraphCategorySet(*presets)
 
     MIN_EDGES_LOOPS = size
@@ -140,6 +153,9 @@ class GraphGenerator:
       while True:
         node_a = random.randint(0, size - 1)
         node_b = random.randint(0, size - 1)
+        if node_a == node_b and GraphCategory.LOOPS not in preset:
+          continue
+
         weight = random.randint(0, max_weight) if GraphCategory.WEIGHTED in preset else 0
         
         if graph.add_edge(node_a, node_b, weight):
@@ -155,7 +171,7 @@ if __name__ == "__main__":
   size = 3
   print("Test started...")
   print("Size: ", size)
-  graph = GraphGenerator.create(size, presets=('loops', 'connected', 'weighted'))
+  graph = GraphGenerator.create(size, presets=('connected', 'weighted'))
 
   print('Graph created')
   print("Edges count: ", len(graph.edges))
