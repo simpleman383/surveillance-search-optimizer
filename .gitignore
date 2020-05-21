@@ -1,1 +1,9 @@
 .vscode/settings.json
+primitives/__pycache__/__init__.cpython-38.pyc
+primitives/__pycache__/graph.cpython-38.pyc
+primitives/__pycache__/utils.cpython-38.pyc
+evaluation/__pycache__/main.cpython-38.pyc
+evaluation/__pycache__/__main__.cpython-38.pyc
+evaluation/__pycache__/__init__.cpython-38.pyc
+__pycache__/graph.cpython-38.pyc
+.vscode/launch.json
