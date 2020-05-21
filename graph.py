@@ -51,11 +51,19 @@ class Graph:
           edges.add(edge)
     return edges
 
+  def __iter__(self):
+    self.__iter = iter(self._adjacment.keys())
+    return self
+
+  def __next__(self):
+    next_id = next(self.__iter)
+    return self._adjacment[next_id]
+
   def __contains__(self, node_id):
     return node_id in self._adjacment.keys()
  
-  def contains_node(self, node_id):
-    return self.__contains__(node_id)
+  def contains_node(self, node):
+    return self.__contains__(node.id)
 
   def add_node(self):
     self._adjacment[self.size] = ( GraphNode(self.size), set() ) 
