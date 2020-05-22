@@ -15,11 +15,11 @@ class Experiment:
 
 
   def run(self):
-    size = 3
-    surveillance_object_count = 10
+    size = 20
+    surveillance_object_count = 1
 
-    graph = GraphGenerator.create(size, max_weight=10)
-    graph.print()
+    graph = GraphGenerator.create(size, max_weight=20)
+    #graph.print()
 
     dispatcher = SurveillanceObjectDispatcher(graph)
     dispatcher.setup_objects(surveillance_object_count)

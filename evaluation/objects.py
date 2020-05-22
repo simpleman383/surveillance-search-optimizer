@@ -52,6 +52,7 @@ class SurveillanceObject:
       self.__speed = 1
       self.__route, _ = self.__router.find_path(self.__coordinates, self.current_task.destination)
       self.__state = State.MOVING
+      self.__logger.info("Short path calculated:", [ n.id for n in self.__route ])
 
 
   def __on_domain_reached(self, domain_id):
@@ -68,6 +69,9 @@ class SurveillanceObject:
 
 
   def __process_move_task(self):
+    if len(self.__route) < 2:
+      return self.__coordinates
+
     current_node = self.__route[0]
     target_node = self.__route[1]
     distance = current_node.get_weight(target_node.id)

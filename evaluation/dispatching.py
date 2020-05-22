@@ -9,7 +9,7 @@ class SurveillanceObjectDispatcher:
     self.__logger = Logger("Dispatcher")
     self.__logger.info("Setting up surveillance object dispatcher")
     self.__graph = area_graph
-    self.__generator = TaskGenerator()
+    self.__generator = TaskGenerator(area_graph)
 
 
   def setup_objects(self, count = 1):

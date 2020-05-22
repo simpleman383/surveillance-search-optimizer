@@ -2,6 +2,7 @@ from .utils import EvaluationError
 from abc import ABC, abstractmethod
 from enum import Enum
 from .routing import Coordinates
+import random
 
 class TaskType(Enum):
   WAIT = 0
@@ -77,10 +78,10 @@ class TaskStack:
 
 
 class TaskGenerator:
-  def __init__(self):
-    pass
+  def __init__(self, graph):
+    self.__graph = graph
 
   def create_task(self, target_object, timetick):
     coords = target_object.coordinates
-    dest_coord = Coordinates((coords.domain + 1) % 3)
+    dest_coord = Coordinates(random.randint(0, self.__graph.size - 1))
     return MoveTask(coords, timetick, dest_coord)
