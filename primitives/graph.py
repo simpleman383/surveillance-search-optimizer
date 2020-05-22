@@ -1,6 +1,7 @@
 import random
 import pickle
 from enum import IntFlag
+import itertools
 
 class GraphNode:
   def __init__(self, id):
@@ -167,32 +168,53 @@ class GraphGenerator:
       max_edges += MIN_EDGES_LOOPS
 
     graph = Graph(size)
+    edges_available = [ (x, y) for x in range(0, size) for y in range(0, size) ]
     edges_count = random.randint(min_edges, max_edges)
 
     if GraphCategory.LOOPS in preset:
       for i in range(0, size):
         graph.add_edge(i, i, 0)
+        edges_available.remove((i,i))
+
       edges_count -= MIN_EDGES_LOOPS
 
     if GraphCategory.CONNECTED in preset:
       for i in range(0, size - 1):
-        weight = random.randint(0, max_weight) if GraphCategory.WEIGHTED in preset else 0
+        weight = random.randint(1, max_weight) if GraphCategory.WEIGHTED in preset else 0
         graph.add_edge(i, i + 1, weight)
+        edges_available.remove((i,i + 1))
+        edges_available.remove((i + 1,i))
+
       edges_count -= MIN_EDGES_CONNECTED
+
+    random.shuffle(edges_available)
 
     while edges_count > 0:
       while True:
-        node_a = random.randint(0, size - 1)
-        node_b = random.randint(0, size - 1)
-        weight = random.randint(0, max_weight) if GraphCategory.WEIGHTED in preset else 0
+        choice = random.randint(0, len(edges_available) - 1)
 
-        if node_a == node_b and GraphCategory.LOOPS not in preset:
+        edge = edges_available.pop(choice)
+        src = edge[0]
+        dest = edge[1]
+
+        if dest != src:
+          edges_available.remove((dest, src))
+
+        weight = random.randint(1, max_weight) if GraphCategory.WEIGHTED in preset else 0
+
+        if src == dest and GraphCategory.LOOPS not in preset:
           continue
         
-        if graph.add_edge(node_a, node_b, weight):
+        if graph.add_edge(src, dest, weight):
           break
-      
+        else:
+          print('failed', src, dest)
+
       edges_count -= 1
+
+      if len(edges_available) == 0:
+        break
+
 
     return graph
 
@@ -211,5 +233,3 @@ if __name__ == "__main__":
 
   print("Edges: ", [ (edge[0].id, edge[1].id, edge[0].get_weight(edge[1].id) ) for edge in graph.edges ])
   graph.print()
-
- 

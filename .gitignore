@@ -9,3 +9,8 @@ __pycache__/graph.cpython-38.pyc
 .vscode/launch.json
 primitives/metrics/__pycache__/paths.cpython-38.pyc
 primitives/metrics/__pycache__/__init__.cpython-38.pyc
+evaluation/__pycache__/dispatching.cpython-38.pyc
+evaluation/__pycache__/objects.cpython-38.pyc
+evaluation/__pycache__/routing.cpython-38.pyc
+evaluation/__pycache__/tasking.cpython-38.pyc
+evaluation/__pycache__/utils.cpython-38.pyc
