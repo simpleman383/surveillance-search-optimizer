@@ -56,6 +56,7 @@ class SurveillanceObject:
 
 
   def __on_domain_reached(self, domain_id):
+    self.__route.pop(0)
     self.__logger.info('Domain changed. New domain: ', domain_id)
 
 
@@ -69,7 +70,7 @@ class SurveillanceObject:
 
 
   def __process_move_task(self):
-    if len(self.__route) < 2:
+    if len(self.__route) <= 1:
       return self.__coordinates
 
     current_node = self.__route[0]
@@ -78,11 +79,13 @@ class SurveillanceObject:
 
     current_domain, current_offset = self.__coordinates.get()
 
+    if current_offset == 0:
+      self.__logger.info(f'Estimated distance to domain {target_node.id}:', distance)
+
     next_offset = current_offset + self.__speed
 
     if next_offset >= distance:
       next_domain = target_node.id
-      self.__route.pop(0)
       self.__on_domain_reached(next_domain)
       return Coordinates(next_domain, 0)
     else:

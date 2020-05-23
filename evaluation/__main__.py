@@ -10,7 +10,7 @@ import time
 class Experiment:
   def __init__(self):
     self.__timetick = 0
-    self.__time_limit = 1000000
+    self.__time_limit = 10000
     self.__time_step = 1
 
 
@@ -18,7 +18,7 @@ class Experiment:
     size = 20
     surveillance_object_count = 1
 
-    graph = GraphGenerator.create(size, max_weight=20)
+    graph = GraphGenerator.create(size, max_weight=50)
     #graph.print()
 
     dispatcher = SurveillanceObjectDispatcher(graph)
@@ -27,7 +27,7 @@ class Experiment:
     while self.__timetick < self.__time_limit:
       dispatcher.on_timetick(self.__timetick)
       self.__timetick += self.__time_step
-      time.sleep(1)
+      #time.sleep(.01)
 
 
 
