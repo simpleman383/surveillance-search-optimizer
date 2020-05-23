@@ -1,9 +1,9 @@
 from enum import Enum
 from uuid import uuid4
-from .utils import EvaluationError
+from .utils import EvaluationError, Logger
 from .tasking import TaskStack, TaskType
-from .routing import Router, Coordinates
-from .utils import Logger
+from .dispatching import SurveillanceObjectDispatcher, DispatchingInfo
+from .coordinate import Coordinates
 
 
 class State(Enum):
@@ -13,11 +13,11 @@ class State(Enum):
 
 class SurveillanceObject:
 
-  def __init__(self, router, start_domain = 0, id = None):
+  def __init__(self, dispatcher, start_domain = 0, id = None):
     self.__id = id if id is not None else uuid4().hex
     self.__task_stack = TaskStack()
 
-    self.__router = router
+    self.__dispatcher = dispatcher
     self.__coordinates = Coordinates(start_domain)
     self.__state = State.IDLE
     self.__route = None
@@ -34,42 +34,57 @@ class SurveillanceObject:
   def coordinates(self):
     return self.__coordinates
   
+  @property
+  def snapshot(self):
+    return DispatchingInfo(self.__id, self.__coordinates)
 
   def __on_task_changed(self):
     if self.current_task is None:
-      self.__speed = 0
-      self.__route = None
-      self.__state = State.IDLE
+      new_task = self.__dispatcher.get_task(self.snapshot)
+      self.__add_task(new_task)
       return 
 
     if self.current_task.category == TaskType.WAIT:
-      self.__logger.info("Received await task.")
-      self.__speed = 0
-      self.__route = None
-      self.__state = State.IDLE
+      self.__on_wait_task_received()
     elif self.current_task.category == TaskType.MOVE:
-      self.__logger.info("Received move task.", f"From: {self.__coordinates.domain}", f"To: {self.current_task.destination.domain}")
-      self.__speed = 1
-      self.__route, _ = self.__router.find_path(self.__coordinates, self.current_task.destination)
-      self.__state = State.MOVING
-      self.__logger.info("Short path calculated:", [ n.id for n in self.__route ])
+      self.__on_move_task_received()
+      
 
+  def __on_wait_task_received(self):
+    self.__logger.info("Received await task.")
+    self.__state = State.IDLE
+    self.__speed = 0
+    self.__route = None
+
+  def __on_move_task_received(self):
+    self.__logger.info("Received move task.", f"From: {self.__coordinates.domain}", f"To: {self.current_task.destination.domain}")
+    self.__state = State.MOVING
+    self.__speed = 1
+    self.__route, _ = self.__dispatcher.get_route(self.__coordinates, self.current_task.destination)
+  
 
   def __on_domain_reached(self, domain_id):
     self.__route.pop(0)
-    self.__logger.info('Domain changed. New domain: ', domain_id)
+    self.__dispatcher.on_domain_enter(self.snapshot, domain_id)
 
 
-  def add_task(self, task):
+  def __add_task(self, task):
+    if task is None:
+      raise EvaluationError("Task cannot be none")
+
     self.__task_stack.push(task)
     self.__on_task_changed()
 
+
+  def add_task(self, task):
+    return self.__add_task(task)
+
   
-  def __process_wait_task(self):
+  def __process_wait(self):
     return self.__coordinates
 
 
-  def __process_move_task(self):
+  def __process_move(self):
     if len(self.__route) <= 1:
       return self.__coordinates
 
@@ -80,6 +95,7 @@ class SurveillanceObject:
     current_domain, current_offset = self.__coordinates.get()
 
     if current_offset == 0:
+      self.__dispatcher.on_domain_leave(self.snapshot, current_domain)
       self.__logger.info(f'Estimated distance to domain {target_node.id}:', distance)
 
     next_offset = current_offset + self.__speed
@@ -92,16 +108,18 @@ class SurveillanceObject:
       return Coordinates(current_domain, next_offset)      
 
 
-  def process_current_task(self, timetick):
+  def on_timetick(self, timetick):
+    if self.current_task is None:
+      self.__on_task_changed()
 
-    if self.current_task.category == TaskType.WAIT:
-      self.__coordinates = self.__process_wait_task()
+    if self.__state == State.IDLE:
+      self.__coordinates = self.__process_wait()
     
-    if self.current_task.category == TaskType.MOVE:
-      self.__coordinates = self.__process_move_task()
+    if self.__state == State.MOVING:
+      self.__coordinates = self.__process_move()
 
     self.__logger.info('Coordinates changed:', self.__coordinates.domain, self.__coordinates.offset)
-    
+
     if self.current_task.completed(self.__coordinates, timetick):
       self.__logger.info('Task completed', f'Current domain: {self.__coordinates.domain}')
       self.__task_stack.pop()

@@ -1,7 +1,7 @@
 from .utils import EvaluationError
 from abc import ABC, abstractmethod
 from enum import Enum
-from .routing import Coordinates
+from .coordinate import Coordinates
 import random
 
 class TaskType(Enum):
@@ -81,7 +81,6 @@ class TaskGenerator:
   def __init__(self, graph):
     self.__graph = graph
 
-  def create_task(self, target_object, timetick):
-    coords = target_object.coordinates
+  def create_task(self, object_snapshot, timetick):
     dest_coord = Coordinates(random.randint(0, self.__graph.size - 1))
-    return MoveTask(coords, timetick, dest_coord)
+    return MoveTask(object_snapshot.coordinates, timetick, dest_coord)

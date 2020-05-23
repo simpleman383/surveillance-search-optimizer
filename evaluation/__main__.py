@@ -7,6 +7,7 @@ from .dispatching import SurveillanceObjectDispatcher
 from .tasking import TaskGenerator
 import time
 
+
 class Experiment:
   def __init__(self):
     self.__timetick = 0
@@ -15,19 +16,23 @@ class Experiment:
 
 
   def run(self):
-    size = 20
+    size = 3
     surveillance_object_count = 1
 
-    graph = GraphGenerator.create(size, max_weight=50)
-    #graph.print()
+    graph = GraphGenerator.create(size, max_weight=10)
 
     dispatcher = SurveillanceObjectDispatcher(graph)
-    dispatcher.setup_objects(surveillance_object_count)
+    surveillance_objects = [ SurveillanceObject(dispatcher, id=idx) for idx in range(0, surveillance_object_count) ]
 
     while self.__timetick < self.__time_limit:
+
+      for surveillance_object in surveillance_objects:
+        surveillance_object.on_timetick(self.__timetick)
+
       dispatcher.on_timetick(self.__timetick)
+      
       self.__timetick += self.__time_step
-      #time.sleep(.01)
+      time.sleep(1)
 
 
 

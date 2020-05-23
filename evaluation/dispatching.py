@@ -1,33 +1,70 @@
 from .utils import Logger, EvaluationError
-from .objects import SurveillanceObject
 from .tasking import TaskGenerator
-from .routing import Router
+from .coordinate import Coordinates
+from primitives.metrics.paths import get_shortest_path
+
+
+class DispatchingInfo:
+  def __init__(self, id, coordinates):
+    self.__id = id
+    self.__coordinates = coordinates
+
+  @property
+  def id(self):
+    return self.__id
+
+  @property
+  def coordinates(self):
+    return self.__coordinates
+
+  def __eq__(self, other):
+    return self.id == other.id and self.coordinates == other.coordinates
+
 
 
 class SurveillanceObjectDispatcher:
-  def __init__(self, area_graph):
-    self.__logger = Logger("Dispatcher")
-    self.__logger.info("Setting up surveillance object dispatcher")
-    self.__graph = area_graph
-    self.__generator = TaskGenerator(area_graph)
 
-
-  def setup_objects(self, count = 1):
-    self.__logger.info("Initializing surveillance objects. Count:", count)
-   
-    router = Router(self.__graph)
-    self.__surveillance_objects = [ SurveillanceObject(router, id=i) for i in range(0, count) ]
-
+  def __init__(self, graph):
+    self.__graph = graph
+    self.__generator = TaskGenerator(graph)
+    self.__timetick = 0
+    self.__logger = Logger('Dispatcher')
 
   def on_timetick(self, timetick):
-    if self.__surveillance_objects is None:
-      raise EvaluationError("No surveillance objects created")
-
-    for surveillance_object in self.__surveillance_objects:
-      if surveillance_object.current_task is None:
-        task = self.__generator.create_task(surveillance_object, timetick)
-        surveillance_object.add_task(task)
-
-      surveillance_object.process_current_task(timetick)
+    self.__timetick = timetick
 
 
+  def __find_path(self, src_coordinates, dest_coordinates):
+    src_id = src_coordinates.domain
+    dest_id = dest_coordinates.domain
+    return get_shortest_path(self.__graph, src_id, dest_id)
+
+
+  def get_route(self, src_coordinates, dest_coordinates):
+    route_info = self.__find_path(src_coordinates, dest_coordinates)
+    self.__logger.info("Short path calculated:", [ n.id for n in route_info[0] ])
+    return route_info
+
+
+  def get_task(self, object_snapshot):
+    return self.__generator.create_task(object_snapshot, self.__timetick)
+
+
+  def on_domain_leave(self, object_snapshot, domain_id):
+    self.__logger.info(f"Object #{object_snapshot.id} left domain:", domain_id)
+    node = self.__graph.get_node(domain_id)
+    
+    if 'guests' in node.attribute.keys():
+      node.attribute['guests'].remove(object_snapshot.id)
+    else:
+      node.attribute['guests'] = []
+
+
+  def on_domain_enter(self, object_snapshot, domain_id):
+    self.__logger.info(f"Object #{object_snapshot.id} entered domain:", domain_id)
+    node = self.__graph.get_node(domain_id)
+
+    if 'guests' in node.attribute.keys():
+      node.attribute['guests'].append(object_snapshot.id)
+    else:
+      node.attribute['guests'] = [ object_snapshot.id ]
