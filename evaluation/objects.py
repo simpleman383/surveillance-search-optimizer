@@ -4,16 +4,25 @@ from .utils import EvaluationError, Logger
 from .tasking import TaskStack, TaskType
 from .dispatching import SurveillanceObjectDispatcher, DispatchingInfo
 from .coordinate import Coordinates
-
+from numpy import random
 
 class State(Enum):
   IDLE = 0,
   MOVING = 1
 
+def generate_average_speeds(exp=1, sigma=0.5, size=1):
+  speeds = []
+  while len(speeds) < size:
+    candidate = random.normal(exp, sigma, 1)
+    if candidate > 0:
+      speeds.append(candidate)
+  
+  return speeds
+
 
 class SurveillanceObject:
 
-  def __init__(self, dispatcher, start_domain = 0, id = None):
+  def __init__(self, dispatcher, start_domain = 0, id = None, average_speed=1):
     self.__id = id if id is not None else uuid4().hex
     self.__task_stack = TaskStack()
 
@@ -22,8 +31,10 @@ class SurveillanceObject:
     self.__state = State.IDLE
     self.__route = None
     self.__speed = 0
+    self.__average_speed = average_speed
 
     self.__logger = Logger(f"Object #{self.__id}")
+    self.__logger.info(f'Object #{self.__id} created')
 
 
   @property
@@ -59,7 +70,7 @@ class SurveillanceObject:
   def __on_move_task_received(self):
     self.__logger.info("Received move task.", f"From: {self.__coordinates.domain}", f"To: {self.current_task.destination.domain}")
     self.__state = State.MOVING
-    self.__speed = 1
+    self.__speed = self.__average_speed
     self.__route, _ = self.__dispatcher.get_route(self.__coordinates, self.current_task.destination)
   
 

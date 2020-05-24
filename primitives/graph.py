@@ -127,8 +127,16 @@ class Graph:
     return graph
 
   def print(self):
+    print(self.__str__())
+
+  def __str__(self):
+    acc = "\n"
     for source in self._nodes.values():
-      print(f"Node #{source.id}:", [ (dest.id, source.get_weight(dest.id)) for dest in self.adjacent_nodes(source.id) ] )
+      acc += f"Node #{source.id}: {[ (dest.id, source.get_weight(dest.id)) for dest in self.adjacent_nodes(source.id) ]}\n"
+    return acc 
+
+  def __repr__(self):
+    return self.__str__()
 
 
 class GraphCategory(IntFlag):

@@ -66,7 +66,8 @@ class SurveillanceObjectDispatcher:
     node = self.__graph.get_node(domain_id)
     
     if 'guests' in node.attribute.keys():
-      node.attribute['guests'].remove(object_snapshot.id)
+      if object_snapshot.id in node.attribute['guests']:
+        node.attribute['guests'].remove(object_snapshot.id)
     else:
       node.attribute['guests'] = []
 
