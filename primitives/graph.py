@@ -150,7 +150,7 @@ class GraphCategorySet:
 class GraphGenerator:
   
   @staticmethod
-  def create(size, presets=('weighted', 'connected'), max_weight=100):
+  def create(size, presets=('weighted', 'connected'), min_weight=1, max_weight=100):
     preset = GraphCategorySet(*presets)
 
     MIN_EDGES_LOOPS = size
@@ -180,7 +180,7 @@ class GraphGenerator:
 
     if GraphCategory.CONNECTED in preset:
       for i in range(0, size - 1):
-        weight = random.randint(1, max_weight) if GraphCategory.WEIGHTED in preset else 0
+        weight = random.randint(min_weight, max_weight) if GraphCategory.WEIGHTED in preset else 0
         graph.add_edge(i, i + 1, weight)
         edges_available.remove((i,i + 1))
         edges_available.remove((i + 1,i))
@@ -200,7 +200,7 @@ class GraphGenerator:
         if dest != src:
           edges_available.remove((dest, src))
 
-        weight = random.randint(1, max_weight) if GraphCategory.WEIGHTED in preset else 0
+        weight = random.randint(min_weight, max_weight) if GraphCategory.WEIGHTED in preset else 0
 
         if src == dest and GraphCategory.LOOPS not in preset:
           continue

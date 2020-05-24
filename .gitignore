@@ -15,3 +15,9 @@ evaluation/__pycache__/routing.cpython-38.pyc
 evaluation/__pycache__/tasking.cpython-38.pyc
 evaluation/__pycache__/utils.cpython-38.pyc
 evaluation/__pycache__/coordinate.cpython-38.pyc
+sandbox/__init__.py
+sandbox/__main__.py
+sandbox/__pycache__/__main__.cpython-38.pyc
+sandbox/__pycache__/__init__.cpython-38.pyc
+evaluation/__pycache__/transition.cpython-38.pyc
+evaluation/__pycache__/random.cpython-38.pyc

@@ -24,7 +24,7 @@ class DispatchingInfo:
 
 class SurveillanceObjectDispatcher:
 
-  def __init__(self, graph):
+  def __init__(self, graph, objects_count):
     self.__graph = graph
     self.__generator = TaskGenerator(graph)
     self.__timetick = 0

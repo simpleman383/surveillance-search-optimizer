@@ -19,9 +19,10 @@ class Experiment:
     size = 3
     surveillance_object_count = 1
 
-    graph = GraphGenerator.create(size, max_weight=10)
+    graph = GraphGenerator.create(size, min_weight=5, max_weight=25)
 
-    dispatcher = SurveillanceObjectDispatcher(graph)
+    dispatcher = SurveillanceObjectDispatcher(graph, objects_count=surveillance_object_count)
+    
     surveillance_objects = [ SurveillanceObject(dispatcher, id=idx) for idx in range(0, surveillance_object_count) ]
 
     while self.__timetick < self.__time_limit:
