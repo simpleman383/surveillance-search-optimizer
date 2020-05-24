@@ -1,5 +1,5 @@
 from .utils import Logger, EvaluationError
-from .tasking import TaskGenerator
+from .tasking import TaskGenerator, TaskType
 from .coordinate import Coordinates
 from primitives.metrics.paths import get_shortest_path
 
@@ -24,14 +24,20 @@ class DispatchingInfo:
 
 class SurveillanceObjectDispatcher:
 
-  def __init__(self, graph, objects_count):
+  def __init__(self, graph, objects_count, transitions, moving_degree=0.5, max_await=10):
     self.__graph = graph
-    self.__generator = TaskGenerator(graph)
+    self.__generator = TaskGenerator(graph, transitions, moving_degree=moving_degree, max_await=max_await)
     self.__timetick = 0
     self.__logger = Logger('Dispatcher')
+    
+    self.__move_target_counters = { n.id : 0 for n in graph.nodes }
+
 
   def on_timetick(self, timetick):
     self.__timetick = timetick
+
+  def on_end_of_time(self):
+    self.__logger.info("Statisitcs.", "Move task targets:", self.__move_target_counters)
 
 
   def __find_path(self, src_coordinates, dest_coordinates):
@@ -47,7 +53,12 @@ class SurveillanceObjectDispatcher:
 
 
   def get_task(self, object_snapshot):
-    return self.__generator.create_task(object_snapshot, self.__timetick)
+    task = self.__generator.create_task(object_snapshot, self.__timetick)
+
+    if task.category == TaskType.MOVE:
+      self.__move_target_counters[task.destination.domain] += 1
+
+    return task
 
 
   def on_domain_leave(self, object_snapshot, domain_id):

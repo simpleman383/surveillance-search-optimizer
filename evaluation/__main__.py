@@ -5,6 +5,7 @@ from .objects import SurveillanceObject
 
 from .dispatching import SurveillanceObjectDispatcher
 from .tasking import TaskGenerator
+from .transition import TransitionGenerator, TransitionType, GroupType
 import time
 
 
@@ -19,10 +20,12 @@ class Experiment:
     size = 3
     surveillance_object_count = 1
 
-    graph = GraphGenerator.create(size, min_weight=5, max_weight=25)
-
-    dispatcher = SurveillanceObjectDispatcher(graph, objects_count=surveillance_object_count)
+    graph = GraphGenerator.create(size, min_weight=3, max_weight=10)
     
+    transition_matrix_generator = TransitionGenerator(size, min_group=2, group_gen_type=GroupType.PLAIN, transition_gen_type=TransitionType.GEOMETRIC_MONOPOLAR)
+    transition_matrices = transition_matrix_generator.get_samples(surveillance_object_count)
+
+    dispatcher = SurveillanceObjectDispatcher(graph, transitions=transition_matrices, objects_count=surveillance_object_count)
     surveillance_objects = [ SurveillanceObject(dispatcher, id=idx) for idx in range(0, surveillance_object_count) ]
 
     while self.__timetick < self.__time_limit:
@@ -34,6 +37,8 @@ class Experiment:
       
       self.__timetick += self.__time_step
       time.sleep(1)
+
+    dispatcher.on_end_of_time()
 
 
 

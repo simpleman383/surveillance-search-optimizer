@@ -51,7 +51,7 @@ class SurveillanceObject:
       
 
   def __on_wait_task_received(self):
-    self.__logger.info("Received await task.")
+    self.__logger.info("Received await task.", "Timeout:", self.current_task.timeout)
     self.__state = State.IDLE
     self.__speed = 0
     self.__route = None

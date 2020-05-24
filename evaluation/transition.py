@@ -90,7 +90,16 @@ class TransitionMatrix:
     return self
 
   
+  @property
+  def possible_destinations(self):
+    return list(self.__data.keys())
+
+  
   def get_transition_probabilty(self, src, dest):
+    if src not in self.__data.keys():
+      _, value = rnd.choice(list(self.__data.items()))
+      return value[dest]
+
     if self.__check_keys(src, dest):
       return self.__data[src][dest]
     else:
