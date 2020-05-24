@@ -21,3 +21,4 @@ sandbox/__pycache__/__main__.cpython-38.pyc
 sandbox/__pycache__/__init__.cpython-38.pyc
 evaluation/__pycache__/transition.cpython-38.pyc
 evaluation/__pycache__/random.cpython-38.pyc
+output_data/

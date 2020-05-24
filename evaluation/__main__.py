@@ -36,7 +36,7 @@ class Experiment:
       dispatcher.on_timetick(self.__timetick)
       
       self.__timetick += self.__time_step
-      time.sleep(1)
+      # time.sleep(1)
 
     dispatcher.on_end_of_time()
 
