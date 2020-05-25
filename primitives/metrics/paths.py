@@ -46,10 +46,10 @@ def find_paths(graph, src_id, dest_id):
   if src is None or dest is None:
     raise GraphInternalError(f"Nodes with id {src_id} or {dest_id} do not belong to the graph")
 
-  return _find_paths(g, src, dest, paths = [])
+  return _find_paths(g, src, dest, path=[], paths = [])
 
 
-def _find_paths(graph, src, dest, path = [], paths = []):
+def _find_paths(graph, src, dest, path=[], paths=[]):
   src.attribute['visited'] = True
   path.append(src.id)
 
@@ -154,3 +154,26 @@ def get_shortest_path(graph, src_id, dest_id):
   path = _collect_shortest_path(g, src, dest)
   distance = dest.attribute['distance']
   return (path, distance)
+
+
+def get_shortest_of_paths(graph, paths):
+  if len(paths) == 0:
+    return None
+
+  def get_distance(graph, path):
+    if len(path) == 0:
+      return 0
+
+    distance = 0
+
+    for idx in range(0, len(path) - 1):
+      current = path[idx]
+      next = path[idx + 1]
+      distance += graph.get_node(current).get_weight(next)
+
+    return distance
+
+  return min([ get_distance(graph, p) for p in paths ])
+  
+
+  
