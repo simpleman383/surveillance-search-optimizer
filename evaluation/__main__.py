@@ -5,7 +5,7 @@ from .objects import SurveillanceObject, generate_average_speeds
 from .dispatching import SurveillanceObjectDispatcher
 from .tasking import TaskGenerator
 from .transition import TransitionGenerator, TransitionType, GroupType
-from .surveillance import BaseSurveillance
+from .surveillance import BaseSurveillanceSystem as SimpleSystem
 import time
 
 from evaluation import experiment_root_path
@@ -15,7 +15,7 @@ from evaluation import experiment_root_path
 class Experiment:
   def __init__(self):
     self.__timetick = 0
-    self.__time_limit = 1000
+    self.__time_limit = 100
     self.__time_step = 1
     self.__logger = Logger("Main")
 
@@ -56,7 +56,7 @@ class Experiment:
 
 
     # Setting up surveillance models
-    surveillance_system = BaseSurveillance(domain_graph, supervised_objects=[0])
+    surveillance_system = SimpleSystem(domain_graph, supervised_object_ids=[0])
 
 
     while self.__timetick < self.__time_limit:
@@ -72,6 +72,8 @@ class Experiment:
 
     dispatcher.on_end_of_time()
     self.__logger.info("Experiment finished")
+    self.__logger.info("Base surveillance statistic:")
+    self.__logger.info(surveillance_system.resource_statistic)
 
 
 
