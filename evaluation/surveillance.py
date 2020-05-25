@@ -1,5 +1,6 @@
 import random
 import math
+import copy
 from primitives.metrics.paths import find_paths, get_shortest_of_paths
 from primitives.graph import Graph, GraphNode
 from .utils import Logger
@@ -17,6 +18,18 @@ class SimpleSurveillanceNode(GraphNode):
     self._frames_processed = 0
 
 
+  def set_observed_domain(self, domain_obj):
+    self.__observed_domain = domain_obj
+
+  @property
+  def observed_domain(self):
+    return self.__observed_domain
+
+  def get_frame_content(self):
+    observed_domain = self.__observed_domain
+    frame_content = observed_domain.attribute['guests']
+    return copy.deepcopy(frame_content)
+
   @property
   def resource_statistic(self):
     return { "Frames processed": self._frames_processed }
@@ -26,12 +39,12 @@ class SimpleSurveillanceNode(GraphNode):
     return self.get_weight(adjacent_node_id)
 
 
-  def process_frame(self, timetick):
+  def on_timetick(self, timetick):
     if self._active:
-      observed_domain = self.attribute['observed_domain']
-      frame_content = observed_domain.attribute['guests']
+      frame_content = self.get_frame_content()
       self._frames_processed += 1
-      self._dispatcher.on_process_frame((self.id, observed_domain.id), timetick, frame_content)
+      self._dispatcher.on_process_frame((self.id, self.observed_domain.id), timetick, frame_content)
+
 
 
 class SurveillanceDispatcher:
@@ -75,7 +88,7 @@ class BaseSurveillanceSystem:
     
     self._logger.info("System initialized")
     self._logger.info("Target object ids:", self._targets)
-    self._logger.info("Surveillance/domain node matching:", [ (x.id, x.attribute['observed_domain'].id) for x in self._surveillance_nodes ])
+    self._logger.info("Surveillance/domain node matching:", [ (x.id, x.observed_domain.id) for x in self._surveillance_nodes ])
 
 
   @property
@@ -96,14 +109,12 @@ class BaseSurveillanceSystem:
     surveillance_nodes = [ SimpleSurveillanceNode(idx, dispatcher) for idx in range(0, surveillance_size) ]
     for idx in range(len(surveillance_nodes)):
       node = surveillance_nodes[idx]
-      node.attribute['observed_domain'] = supervised_domain_nodes[idx]
+      node.set_observed_domain(supervised_domain_nodes[idx])
 
     return surveillance_nodes      
 
 
   def on_timetick(self, timetick):
     for surveillance_node in self._surveillance_nodes:
-      surveillance_node.process_frame(timetick)
+      surveillance_node.on_timetick(timetick)
     
-    
-      

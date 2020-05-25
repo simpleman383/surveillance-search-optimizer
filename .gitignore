@@ -23,3 +23,5 @@ evaluation/__pycache__/transition.cpython-38.pyc
 evaluation/__pycache__/random.cpython-38.pyc
 output_data/
 evaluation/__pycache__/surveillance.cpython-38.pyc
+evaluation/__pycache__/networking.cpython-38.pyc
+evaluation/__pycache__/surveillance_advanced.cpython-38.pyc
