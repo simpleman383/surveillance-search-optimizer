@@ -33,7 +33,7 @@ class Experiment:
     self.__transition_probabilities_distribution = TransitionType.GEOMETRIC_MONOPOLAR
 
     self.__surveillance_nodes_ratio = 1
-    self.__surveillance_target_count = 1
+    self.__surveillance_target_count = 5
 
     self.__setup_conditions()
     self.print_conditions()
@@ -145,9 +145,9 @@ class Experiment:
     self.__logger.info("Experiment finished")
 
     
-    self.__logger.info("Real movements:", self.__movement_dispatcher.history)
-    self.__logger.info("Base model history:", self.__reference_surveillance.history)
-    self.__logger.info("Advanced model history:", self.__surveillance.history)
+    self.__logger.info("Real movements:", self.__movement_dispatcher.get_history_formatted(), '\n\n')
+    self.__logger.info("Base model history:", self.__reference_surveillance.get_history_formatted(), '\n\n')
+    self.__logger.info("Advanced model history:", self.__surveillance.get_history_formatted(), '\n\n')
 
     acc_reference = sum([ x['Frames processed'] for x in self.__reference_surveillance.resource_statistic.values() ])
     acc = sum([ x['Frames processed'] for x in self.__surveillance.resource_statistic.values() ])

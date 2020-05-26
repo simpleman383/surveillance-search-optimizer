@@ -212,6 +212,9 @@ class SpatioTemporalSurveillance:
   def history(self):
     return self._dispatcher.history
 
+  def get_history_formatted(self):
+    return "".join([ f"{x}: {self._dispatcher.history[x]}\n" for x in self._dispatcher.history.keys() ])
+
   @property
   def resource_statistic(self):
     return self._dispatcher.node_statistics

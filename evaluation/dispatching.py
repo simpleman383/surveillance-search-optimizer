@@ -31,11 +31,20 @@ class SurveillanceObjectDispatcher:
     self.__logger = Logger('Dispatcher')
     self.__objects_count = objects_count
 
-    self.history = { x: [] for x in range(objects_count) }
+    self.__history = { x: [] for x in range(objects_count) }
     self.__move_target_counters = { n.id : 0 for n in graph.nodes }
 
+  @property
+  def history(self):
+    return self.__history
+
+
+  def get_history_formatted(self):
+    return "".join([ f"{x}: {self.__history[x]}\n" for x in self.__history.keys() ])
+
+
   def reset(self):
-    self.history = { x: [] for x in range(self.__objects_count) }
+    self.__history = { x: [] for x in range(self.__objects_count) }
     for node in self.__graph.nodes:
       node.attribute['guests'] = []
 
@@ -80,7 +89,7 @@ class SurveillanceObjectDispatcher:
     self.__logger.info(f"Object #{object_snapshot.id} entered domain:", domain_id)
     node = self.__graph.get_node(domain_id)
 
-    self.history[object_snapshot.id].append((domain_id, timetick))
+    self.__history[object_snapshot.id].append((domain_id, timetick))
 
     if 'guests' in node.attribute.keys():
       node.attribute['guests'].append(object_snapshot.id)
