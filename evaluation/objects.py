@@ -41,6 +41,10 @@ class SurveillanceObject:
     self.__speed = 0
 
   @property
+  def id(self):
+    return self.__id
+
+  @property
   def current_task(self):
     return self.__task_stack.current
 

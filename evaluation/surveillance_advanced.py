@@ -232,12 +232,13 @@ class SpatioTemporalSurveillance:
 
 
   def on_end_of_time(self):
-    return
     if self.__training:
       print('Training results:')
+      print('Edge Dist Int Min_time')
       for src in self._surveillance_graph.nodes:
         for dest in src.adjacent_nodes:
           print((src.id, dest), src.get_weight(dest).distance, src.get_weight(dest).intensity, src.get_weight(dest).min_time )
+
 
 
   def __build_surveillance_graph(self, domain_graph, alpha, dispatcher, supervised_object_ids):

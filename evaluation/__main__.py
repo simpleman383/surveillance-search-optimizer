@@ -16,22 +16,47 @@ from evaluation import experiment_root_path
 class Experiment:
   def __init__(self):
     self.__timetick = 0
-    self.__time_limit = 100
+    self.__time_limit = 1000
     self.__time_step = 1
     self.__logger = Logger("Main")
 
-    self.__base_domain_graph_size = 10
+    self.__base_domain_graph_size = 4
     self.__base_domain_graph_min_distance = 10
     self.__base_domain_graph_max_distance = 100
 
     self.__objects_count = 5
     self.__object_speed_exp = 10
+    self.__motion_probability = .5
 
     self.__min_transition_group_size = 2
     self.__transition_group_distribution = GroupType.PLAIN
     self.__transition_probabilities_distribution = TransitionType.GEOMETRIC_MONOPOLAR
 
+    self.__surveillance_nodes_ratio = 1
+    self.__surveillance_target_count = 1
+
     self.__setup_conditions()
+    self.print_conditions()
+
+
+  def print_conditions(self):
+    print("Starting experiment")
+    print("Parameters")
+    print("Domain graph size:", self.__base_domain_graph_size)
+    print("Domain graph min distance:", self.__base_domain_graph_min_distance)
+    print("Domain graph max distance:", self.__base_domain_graph_max_distance)
+    print("-----------------------------")
+    print("Objects count:", self.__objects_count)
+    print("Objects motion degree:", self.__motion_probability)
+    print("Objects speed expectation:", self.__object_speed_exp)
+    print("-----------------------------")
+    print("Object transition min group size:", self.__min_transition_group_size)
+    print("Object transition group size distribution:", self.__transition_group_distribution)
+    print("Object transition probabilities distribution:", self.__transition_probabilities_distribution)
+    print("-----------------------------")
+    print("Surveillance nodes to domains ratio:", self.__surveillance_nodes_ratio)
+    print("Surveillance target count:", self.__surveillance_target_count)
+    print("-----------------------------")
 
 
   def __setup_conditions(self):
@@ -49,7 +74,6 @@ class Experiment:
     # Generating transition matrices for objects
     transition_matrix_generator = TransitionGenerator(self.__base_domain_graph_size, min_group=self.__min_transition_group_size, group_gen_type=self.__transition_group_distribution, transition_gen_type=self.__transition_probabilities_distribution)
     transition_matrices = transition_matrix_generator.get_samples(self.__objects_count)
-
 
     self.__logger.info("Transition matrices generated", transition_matrices)
 
@@ -70,8 +94,10 @@ class Experiment:
       dispatcher.on_domain_enter(s_object.snapshot, start_domain_id, self.__timetick)
 
     # Setting up a reference surveillance model
-    self.__reference_surveillance = SimpleSystem(self.__domain_graph, supervised_object_ids=[0])
-    self.__surveillance = AdvancedSystem(self.__domain_graph, supervised_object_ids=[0])
+    supervised_object_ids = [ obj.id for obj in self.__surveillance_objects ][: self.__surveillance_target_count]
+
+    self.__reference_surveillance = SimpleSystem(self.__domain_graph, supervised_object_ids=supervised_object_ids, alpha=self.__surveillance_nodes_ratio)
+    self.__surveillance = AdvancedSystem(self.__domain_graph, supervised_object_ids=supervised_object_ids, alpha=self.__surveillance_nodes_ratio)
 
 
   def train(self):
@@ -88,6 +114,7 @@ class Experiment:
       #time.sleep(.5)
 
     self.__surveillance.on_end_of_time()
+
 
 
   def reset_objects_positions(self):
@@ -117,8 +144,17 @@ class Experiment:
    
     self.__logger.info("Experiment finished")
 
-    print(self.__reference_surveillance.resource_statistic)
-    print(self.__surveillance.resource_statistic)
+    
+    self.__logger.info("Real movements:", self.__movement_dispatcher.history)
+    self.__logger.info("Base model history:", self.__reference_surveillance.history)
+    self.__logger.info("Advanced model history:", self.__surveillance.history)
+
+    acc_reference = sum([ x['Frames processed'] for x in self.__reference_surveillance.resource_statistic.values() ])
+    acc = sum([ x['Frames processed'] for x in self.__surveillance.resource_statistic.values() ])
+
+    print("Reference model processed:", acc_reference)
+    print("Advanced model processed:", acc)
+
 
 if __name__ == '__main__':
   experiment = Experiment()
