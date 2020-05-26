@@ -16,18 +16,18 @@ from evaluation import experiment_root_path
 class Experiment:
   def __init__(self):
     self.__timetick = 0
-    self.__time_limit = 1000
+    self.__time_limit = 10000
     self.__time_step = 1
     self.__logger = Logger("Main")
 
 
   def run(self):
-    size = 3
+    size = 5
     surveillance_object_count = 1
     self.__logger.info("Experiment started")
 
     # Generating base domain graph
-    domain_graph = GraphGenerator.create(size, min_weight=3, max_weight=10)
+    domain_graph = GraphGenerator.create(size, min_weight=100, max_weight=1000)
     for domain in domain_graph.nodes:
       domain.attribute['guests'] = []
 
@@ -46,33 +46,35 @@ class Experiment:
     dispatcher = SurveillanceObjectDispatcher(domain_graph, transitions=transition_matrices, objects_count=surveillance_object_count)
     
     # Generating average speeds of objects
-    average_speeds = generate_average_speeds(size=surveillance_object_count)
+    average_speeds = generate_average_speeds(exp=10, size=surveillance_object_count)
     self.__logger.info("Objects average speeds generated", average_speeds)
 
     # Generating surveillance objects
-    surveillance_objects = [ SurveillanceObject(dispatcher, id=idx, average_speed=average_speeds[idx]) for idx in range(0, surveillance_object_count) ]
+    surveillance_objects = [ SurveillanceObject(dispatcher, id=idx, average_speed=average_speeds[idx], time_step=self.__time_step) for idx in range(0, surveillance_object_count) ]
     for s_object in surveillance_objects:
       start_domain_id = s_object.coordinates.domain
       dispatcher.on_domain_enter(s_object.snapshot, start_domain_id)
 
 
     # Setting up surveillance models
+    
     # surveillance_system = SimpleSystem(domain_graph, supervised_object_ids=[0])
+
     surveillance_system = AdvancedSystem(domain_graph, supervised_object_ids=[0])
 
-
     while self.__timetick < self.__time_limit:
+      surveillance_system.on_timetick(self.__timetick)
 
       for surveillance_object in surveillance_objects:
         surveillance_object.on_timetick(self.__timetick)
 
       dispatcher.on_timetick(self.__timetick)
-      surveillance_system.on_timetick(self.__timetick)
       
       self.__timetick += self.__time_step
-      # time.sleep(1)
+      #time.sleep(.5)
 
     dispatcher.on_end_of_time()
+    surveillance_system.on_end_of_time()
     self.__logger.info("Experiment finished")
     self.__logger.info("Base surveillance statistic:")
     #self.__logger.info(surveillance_system.resource_statistic)

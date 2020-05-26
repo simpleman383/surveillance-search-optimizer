@@ -22,7 +22,7 @@ def generate_average_speeds(exp=1, sigma=0.5, size=1):
 
 class SurveillanceObject:
 
-  def __init__(self, dispatcher, start_domain = 0, id = None, average_speed=1):
+  def __init__(self, dispatcher, start_domain = 0, id = None, average_speed=1, time_step=1):
     self.__id = id if id is not None else uuid4().hex
     self.__task_stack = TaskStack()
 
@@ -32,6 +32,7 @@ class SurveillanceObject:
     self.__route = None
     self.__speed = 0
     self.__average_speed = average_speed
+    self.__time_step = time_step
 
     self.__logger = Logger(f"Object #{self.__id}")
     self.__logger.info(f'Object #{self.__id} created')
@@ -109,7 +110,7 @@ class SurveillanceObject:
       self.__dispatcher.on_domain_leave(self.snapshot, current_domain)
       self.__logger.info(f'Estimated distance to domain {target_node.id}:', distance)
 
-    next_offset = current_offset + self.__speed
+    next_offset = current_offset + (self.__speed * self.__time_step)
 
     if next_offset >= distance:
       next_domain = target_node.id
