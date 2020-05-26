@@ -25,9 +25,6 @@ def filter_direct_routes(routes, src, dest, all_nodes):
 
   return filtered
 
-
-
-
  
 
 class EdgeWeightSet:
@@ -37,13 +34,10 @@ class EdgeWeightSet:
     self.intensity = intensity
 
 
-
-
 class SpatioTemporalSurveillanceGraph(Graph):
   def __init__(self, size, dispatcher, supervised_object_ids):
     self._nodes = { x: SmartSurveillanceNode(x, dispatcher, target_objects=supervised_object_ids) for x in range(0, size) }
     self._adjacency = { x: set() for x in range(0, size) }
-
 
 
 class Signal(Enum):
@@ -52,14 +46,17 @@ class Signal(Enum):
   CANCEL_WAITING = 2,
 
 
-
 class SmartSurveillanceNode(SimpleSurveillanceNode, Receiver):
   def __init__(self, id, dispatcher, target_objects=[]):
     super().__init__(id, dispatcher)
     self.__prev_frame = []
     
-    self.__target_objects = target_objects
+    self.__targets = target_objects
     self.__awaiting_objects = dict()
+
+  def reset(self):
+    self.__awaiting_objects = dict()
+    self.__prev_frame = []
 
 
   def connect(self, network):
@@ -70,21 +67,36 @@ class SmartSurveillanceNode(SimpleSurveillanceNode, Receiver):
     return self._adjacency_edge_weights.keys()
 
   def on_receive(self, src, message):
-    signal_type, object_id, timetick = message
+    signal_type, object_id, timetick, training = message
 
-    if signal_type == Signal.OBJECT_LEFT_DOMAIN:
-      self.__awaiting_objects[object_id] = (src, timetick)
-      
-    if signal_type == Signal.OBJECT_ENTERED_DOMAIN:
-      if src == self.id:
-        return
-      else:
+    if training:
+
+      if signal_type == Signal.OBJECT_LEFT_DOMAIN:
+        self.__awaiting_objects[object_id] = (src, timetick)
+        
+      if signal_type == Signal.OBJECT_ENTERED_DOMAIN:
         for node_id in self.adjacent_nodes:
-          self.__sender.send(self.id, node_id, (Signal.CANCEL_WAITING, object_id, 0))
+          self.__sender.send(self.id, node_id, (Signal.CANCEL_WAITING, object_id, 0, training))
+      
+      if signal_type == Signal.CANCEL_WAITING:
+        if object_id in self.__awaiting_objects.keys():
+          del self.__awaiting_objects[object_id]
     
-    if signal_type == Signal.CANCEL_WAITING:
-      del self.__awaiting_objects[object_id]
+    else:
+      
+      if signal_type == Signal.OBJECT_LEFT_DOMAIN:
+        if not math.isinf(self.get_weight(src).min_time):
+          estimated_activation_time = timetick + self.get_weight(src).min_time - 1
+          self.__awaiting_objects[object_id] = (src, estimated_activation_time)
+      
+      if signal_type == Signal.OBJECT_ENTERED_DOMAIN:
+        for node_id in self.adjacent_nodes:
+          self.__sender.send(self.id, node_id, (Signal.CANCEL_WAITING, object_id, 0, training))
 
+      if signal_type == Signal.CANCEL_WAITING:
+        if object_id in self.__awaiting_objects.keys():
+          del self.__awaiting_objects[object_id]
+      
 
 
   def __on_training_timetick(self, timetick):
@@ -96,7 +108,7 @@ class SmartSurveillanceNode(SimpleSurveillanceNode, Receiver):
     for object_id in outcoming:
       self.__awaiting_objects[object_id] = (self.id, timetick)
       for node_id in self.adjacent_nodes:
-        self.__sender.send(self.id, node_id, (Signal.OBJECT_LEFT_DOMAIN, object_id, timetick))
+        self.__sender.send(self.id, node_id, (Signal.OBJECT_LEFT_DOMAIN, object_id, timetick, True))
 
 
     for object_id in incoming:
@@ -104,7 +116,7 @@ class SmartSurveillanceNode(SimpleSurveillanceNode, Receiver):
         src_domain_id, start_time = self.__awaiting_objects[object_id]
 
         self.__update_weight_set(src_domain_id, start_time, timetick)
-        self.__sender.send(self.id, src_domain_id, (Signal.OBJECT_ENTERED_DOMAIN, object_id, timetick))
+        self.__sender.send(self.id, src_domain_id, (Signal.OBJECT_ENTERED_DOMAIN, object_id, timetick, True))
 
     self.__prev_frame = frame
     
@@ -122,20 +134,49 @@ class SmartSurveillanceNode(SimpleSurveillanceNode, Receiver):
       weight_object.min_time = time_candidate
 
 
-  def __process_frame(self):
-    pass
+  def __process_frame(self, frame, timetick):
+    incoming_objects = set(frame).difference(self.__prev_frame)
+    outcoming_objects = set(self.__prev_frame).difference(frame)
+
+    detected_objects = []
+
+    for object_id in outcoming_objects:
+      if object_id in self.__targets:
+        self.__awaiting_objects[object_id] = (self.id, timetick)
+        for node_id in self.adjacent_nodes:
+          self.__sender.send(self.id, node_id, (Signal.OBJECT_LEFT_DOMAIN, object_id, timetick, False))
+
+    for object_id in incoming_objects:
+      if object_id in self.__targets:
+        
+        detected_objects.append(object_id)
+        
+        if object_id in self.__awaiting_objects.keys():
+          src_domain_id, _ = self.__awaiting_objects[object_id]
+          self.__sender.send(self.id, src_domain_id, (Signal.OBJECT_ENTERED_DOMAIN, object_id, timetick, False))
+        else:
+          print('Not expectable object in frame') 
+
+    self._dispatcher.on_process_frame((self.id, self.observed_domain.id), timetick, detected_objects)
+
+
+  def __current_activation_tasks(self, timetick):
+    res = []
+    for object_id in self.__awaiting_objects.keys():
+      _, estimated_activation_time = self.__awaiting_objects[object_id]
+      if estimated_activation_time == timetick:
+        res.append(object_id)
+    return res
 
 
   def __on_inference_timetick(self, timetick):
     frame = self.get_frame_content()
 
-    incoming_objects = set(frame).difference(self.__prev_frame)
-    outcoming_objects = set(self.__prev_frame).difference(frame)
+    if self._active:
+      self.__process_frame(frame, timetick)
+
 
     self.__prev_frame = frame
-
-
-
 
 
   def on_timetick(self, timetick, training=True):
@@ -145,17 +186,12 @@ class SmartSurveillanceNode(SimpleSurveillanceNode, Receiver):
       self.__on_inference_timetick(timetick)
 
   
-
-
-
-
-class SpatioTemporalDispatcher:
-  def __init__(self):
-    pass
-
-
-  def on_timetick(self, src_node_id, timetick, frame_content):
-    print(frame_content)
+  def update_active_status(self, timetick):
+    current_activation_tasks = self.__current_activation_tasks(timetick)
+    if len(current_activation_tasks) == 0 and len(self.get_frame_content()) == 0 :
+      self._active = False
+    else:
+      self._active = True
 
 
 
@@ -164,27 +200,44 @@ class SpatioTemporalSurveillance:
   def __init__(self, domain_graph, supervised_object_ids=[], alpha=1, logger=None):
     self._logger = Logger("SpatioTemporalSurveillance")
 
-    self._dispatcher = SpatioTemporalDispatcher()
+    self.__training = False
+    self._dispatcher = SurveillanceDispatcher(targets=supervised_object_ids)
     self._surveillance_graph = self.__build_surveillance_graph(domain_graph, alpha, self._dispatcher, supervised_object_ids)
 
     network = Network.establish(self._surveillance_graph.nodes)
     for node in self._surveillance_graph.nodes:
       node.connect(network)
 
+  @property
+  def history(self):
+    return self._dispatcher.history
 
+  @property
+  def resource_statistic(self):
+    return self._dispatcher.node_statistics
 
-  def set_training_mode(self, is_active):
-    pass
+  def set_training_mode(self, active):
+    self.__training = active
+    for node in self._surveillance_graph.nodes:
+      node.reset()
 
 
   def on_timetick(self, timetick):
     for node in self._surveillance_graph.nodes:
-      node.on_timetick(timetick)
+      node.on_timetick(timetick, training=self.__training)
+
+    if not self.__training:
+      for node in self._surveillance_graph.nodes:
+        node.update_active_status(timetick)
+
 
   def on_end_of_time(self):
-    for src in self._surveillance_graph.nodes:
-      for dest in src.adjacent_nodes:
-        print((src.id, dest), src.get_weight(dest).distance, src.get_weight(dest).intensity, src.get_weight(dest).min_time )
+    return
+    if self.__training:
+      print('Training results:')
+      for src in self._surveillance_graph.nodes:
+        for dest in src.adjacent_nodes:
+          print((src.id, dest), src.get_weight(dest).distance, src.get_weight(dest).intensity, src.get_weight(dest).min_time )
 
 
   def __build_surveillance_graph(self, domain_graph, alpha, dispatcher, supervised_object_ids):

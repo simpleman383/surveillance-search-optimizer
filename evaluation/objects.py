@@ -24,19 +24,21 @@ class SurveillanceObject:
 
   def __init__(self, dispatcher, start_domain = 0, id = None, average_speed=1, time_step=1):
     self.__id = id if id is not None else uuid4().hex
-    self.__task_stack = TaskStack()
-
     self.__dispatcher = dispatcher
-    self.__coordinates = Coordinates(start_domain)
-    self.__state = State.IDLE
-    self.__route = None
-    self.__speed = 0
     self.__average_speed = average_speed
     self.__time_step = time_step
+
+    self.reset_state(start_domain)
 
     self.__logger = Logger(f"Object #{self.__id}")
     self.__logger.info(f'Object #{self.__id} created')
 
+  def reset_state(self, start_domain):
+    self.__task_stack = TaskStack()
+    self.__coordinates = Coordinates(start_domain)
+    self.__state = State.IDLE
+    self.__route = None
+    self.__speed = 0
 
   @property
   def current_task(self):
@@ -50,10 +52,10 @@ class SurveillanceObject:
   def snapshot(self):
     return DispatchingInfo(self.__id, self.__coordinates)
 
-  def __on_task_changed(self):
+  def __on_task_changed(self, timetick):
     if self.current_task is None:
-      new_task = self.__dispatcher.get_task(self.snapshot)
-      self.__add_task(new_task)
+      new_task = self.__dispatcher.get_task(self.snapshot, timetick)
+      self.__add_task(new_task, timetick)
       return 
 
     if self.current_task.category == TaskType.WAIT:
@@ -75,28 +77,24 @@ class SurveillanceObject:
     self.__route, _ = self.__dispatcher.get_route(self.__coordinates, self.current_task.destination)
   
 
-  def __on_domain_reached(self, domain_id):
+  def __on_domain_reached(self, domain_id, timetick):
     self.__route.pop(0)
-    self.__dispatcher.on_domain_enter(self.snapshot, domain_id)
+    self.__dispatcher.on_domain_enter(self.snapshot, domain_id, timetick)
 
 
-  def __add_task(self, task):
+  def __add_task(self, task, timetick):
     if task is None:
       raise EvaluationError("Task cannot be none")
 
     self.__task_stack.push(task)
-    self.__on_task_changed()
-
-
-  def add_task(self, task):
-    return self.__add_task(task)
+    self.__on_task_changed(timetick)
 
   
   def __process_wait(self):
     return self.__coordinates
 
 
-  def __process_move(self):
+  def __process_move(self, timetick):
     if len(self.__route) <= 1:
       return self.__coordinates
 
@@ -114,7 +112,7 @@ class SurveillanceObject:
 
     if next_offset >= distance:
       next_domain = target_node.id
-      self.__on_domain_reached(next_domain)
+      self.__on_domain_reached(next_domain, timetick)
       return Coordinates(next_domain, 0)
     else:
       return Coordinates(current_domain, next_offset)      
@@ -122,20 +120,20 @@ class SurveillanceObject:
 
   def on_timetick(self, timetick):
     if self.current_task is None:
-      self.__on_task_changed()
+      self.__on_task_changed(timetick)
 
     if self.__state == State.IDLE:
       self.__coordinates = self.__process_wait()
     
     if self.__state == State.MOVING:
-      self.__coordinates = self.__process_move()
+      self.__coordinates = self.__process_move(timetick)
 
-    self.__logger.info('Coordinates changed:', self.__coordinates.domain, self.__coordinates.offset)
+    self.__logger.info(f"Timetick: {timetick}", 'Coordinates changed:', self.__coordinates.domain, self.__coordinates.offset)
 
     if self.current_task.completed(self.__coordinates, timetick):
       self.__logger.info('Task completed', f'Current domain: {self.__coordinates.domain}')
       self.__task_stack.pop()
-      self.__on_task_changed()
+      self.__on_task_changed(timetick)
 
 
 

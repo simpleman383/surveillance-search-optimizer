@@ -2,7 +2,7 @@ from .utils import Logger, EvaluationError
 from .tasking import TaskGenerator, TaskType
 from .coordinate import Coordinates
 from primitives.metrics.paths import get_shortest_path
-
+import copy
 
 class DispatchingInfo:
   def __init__(self, id, coordinates):
@@ -29,12 +29,16 @@ class SurveillanceObjectDispatcher:
     self.__generator = TaskGenerator(graph, transitions, moving_degree=moving_degree, max_await=max_await)
     self.__timetick = 0
     self.__logger = Logger('Dispatcher')
-    
+    self.__objects_count = objects_count
+
+    self.history = { x: [] for x in range(objects_count) }
     self.__move_target_counters = { n.id : 0 for n in graph.nodes }
 
+  def reset(self):
+    self.history = { x: [] for x in range(self.__objects_count) }
+    for node in self.__graph.nodes:
+      node.attribute['guests'] = []
 
-  def on_timetick(self, timetick):
-    self.__timetick = timetick
 
   def on_end_of_time(self):
     self.__logger.info("Statisitcs.", "Move task targets:", self.__move_target_counters)
@@ -52,8 +56,8 @@ class SurveillanceObjectDispatcher:
     return route_info
 
 
-  def get_task(self, object_snapshot):
-    task = self.__generator.create_task(object_snapshot, self.__timetick)
+  def get_task(self, object_snapshot, timetick):
+    task = self.__generator.create_task(object_snapshot, timetick)
 
     if task.category == TaskType.MOVE:
       self.__move_target_counters[task.destination.domain] += 1
@@ -72,9 +76,11 @@ class SurveillanceObjectDispatcher:
       node.attribute['guests'] = []
 
 
-  def on_domain_enter(self, object_snapshot, domain_id):
+  def on_domain_enter(self, object_snapshot, domain_id, timetick):
     self.__logger.info(f"Object #{object_snapshot.id} entered domain:", domain_id)
     node = self.__graph.get_node(domain_id)
+
+    self.history[object_snapshot.id].append((domain_id, timetick))
 
     if 'guests' in node.attribute.keys():
       node.attribute['guests'].append(object_snapshot.id)

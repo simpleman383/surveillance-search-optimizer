@@ -28,7 +28,7 @@ class SimpleSurveillanceNode(GraphNode):
   def get_frame_content(self):
     observed_domain = self.__observed_domain
     frame_content = observed_domain.attribute['guests']
-    return copy.deepcopy(frame_content)
+    return copy.copy(frame_content)
 
   @property
   def resource_statistic(self):
@@ -52,6 +52,7 @@ class SurveillanceDispatcher:
     self._logger = Logger("Surveillance dispatcher")
     self._targets = targets
     self._node_statistics = dict()
+    self.history = { x: [] for x in targets }
 
 
   @property
@@ -71,7 +72,9 @@ class SurveillanceDispatcher:
 
     if len(match_result) > 0:
       self._logger.info(f"[Node #{source[0]} Domain #{source[1]}] Timetick: {timetick} Match detected:", match_result)
-    
+      for object_id in match_result:
+        self.history[object_id].append((source[1], timetick))
+
     self._update_statistic(source[0])
 
 
@@ -90,6 +93,9 @@ class BaseSurveillanceSystem:
     self._logger.info("Target object ids:", self._targets)
     self._logger.info("Surveillance/domain node matching:", [ (x.id, x.observed_domain.id) for x in self._surveillance_nodes ])
 
+  @property
+  def history(self):
+    return self._dispatcher.history
 
   @property
   def resource_statistic(self):
