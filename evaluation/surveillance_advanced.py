@@ -87,10 +87,13 @@ class SmartSurveillanceNode(SimpleSurveillanceNode, Receiver):
       self.__logger.info(f"Received message from {src}:", signal_type, object_id, timetick)
       
       if signal_type == Signal.OBJECT_LEFT_DOMAIN:
+        estimated_activation_time = timetick
+
         if not math.isinf(self.get_weight(src).min_time):
           estimated_activation_time = timetick + self.get_weight(src).min_time - 1
-          self.__awaiting_objects[object_id] = (src, estimated_activation_time)
-          self.__logger.info(f"Awaiting for object from {src}.", "Estimated act time:", estimated_activation_time)
+
+        self.__awaiting_objects[object_id] = (src, estimated_activation_time)
+        self.__logger.info(f"Awaiting for object from {src}.", "Estimated act time:", estimated_activation_time)
 
       
       if signal_type == Signal.OBJECT_ENTERED_DOMAIN:
@@ -162,7 +165,7 @@ class SmartSurveillanceNode(SimpleSurveillanceNode, Receiver):
           src_domain_id, _ = self.__awaiting_objects[object_id]
           self.__sender.send(self.id, src_domain_id, (Signal.OBJECT_ENTERED_DOMAIN, object_id, timetick, False))
         else:
-          pass
+          self.__awaiting_objects[object_id] = (self.id, timetick)
           # print('Non-expectable object in frame') 
 
     self._dispatcher.on_process_frame((self.id, self.observed_domain.id), timetick, detected_objects)
@@ -192,7 +195,7 @@ class SmartSurveillanceNode(SimpleSurveillanceNode, Receiver):
   
   def update_active_status(self, timetick):
     current_activation_tasks = self.__relevant_activation_tasks(timetick)
-    if len(current_activation_tasks) == 0 and len(self.get_frame_content()) == 0 :
+    if len(current_activation_tasks) == 0:
       self.__logger.info(f"Deactivating due to the absense of relevant tasks", current_activation_tasks, "timetick:", timetick)
       self._active = False
       self.__prev_frame = []
@@ -205,7 +208,7 @@ class SmartSurveillanceNode(SimpleSurveillanceNode, Receiver):
 
 class SpatioTemporalSurveillance:
   def __init__(self, domain_graph, supervised_object_ids=[], alpha=1, logger=None):
-    self._logger = Logger("SpatioTemporalSurveillance")
+    self._logger = Logger("SpatioTemporal_Surveillance")
 
     self.__training = False
     self._dispatcher = SurveillanceDispatcher(targets=supervised_object_ids)
@@ -245,8 +248,11 @@ class SpatioTemporalSurveillance:
     if self.__training:
       print('Training results:')
       print('Edge Dist Int Min_time')
+      self._logger.info('Training results:')
+      self._logger.info('Edge Dist Int Min_time')
       for src in self._surveillance_graph.nodes:
         for dest in src.adjacent_nodes:
+          self._logger.info((src.id, dest), src.get_weight(dest).distance, src.get_weight(dest).intensity, src.get_weight(dest).min_time)
           print((src.id, dest), src.get_weight(dest).distance, src.get_weight(dest).intensity, src.get_weight(dest).min_time )
 
 

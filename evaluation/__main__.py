@@ -21,7 +21,7 @@ class Experiment:
     self.__logger = Logger("Main")
 
     self.__base_domain_graph_size = 3
-    self.__base_domain_graph_min_distance = 10
+    self.__base_domain_graph_min_distance = 20
     self.__base_domain_graph_max_distance = 100
 
     self.__objects_count = 1
@@ -114,7 +114,7 @@ class Experiment:
       #time.sleep(.5)
 
     self.__surveillance.on_end_of_time()
-
+    print('\n----------')
 
 
   def reset_objects_positions(self):
@@ -152,14 +152,17 @@ class Experiment:
     self.__logger.info("Base model history:", self.__reference_surveillance.get_history_formatted(), '\n\n')
     self.__logger.info("Advanced model history:", self.__surveillance.get_history_formatted(), '\n\n')
 
+    print("Real transitions (domain, time):")
     print(self.__movement_dispatcher.get_history_formatted())
+    
+    print("Registered transitions (domain, time):")
     print(self.__surveillance.get_history_formatted())
 
     acc_reference = sum([ x['Frames processed'] for x in self.__reference_surveillance.resource_statistic.values() ])
     acc = sum([ x['Frames processed'] for x in self.__surveillance.resource_statistic.values() ])
 
-    print("Reference model processed:", acc_reference)
-    print("Advanced model processed:", acc)
+    print("Reference model processed:", acc_reference, 'frames')
+    print("Advanced model processed:", acc, 'frames')
 
 
 if __name__ == '__main__':

@@ -28,7 +28,7 @@ class SurveillanceObjectDispatcher:
     self.__graph = graph
     self.__generator = TaskGenerator(graph, transitions, moving_degree=moving_degree, max_await=max_await)
     self.__timetick = 0
-    self.__logger = Logger('Dispatcher')
+    self.__logger = Logger('Global_Movement_Dispatcher')
     self.__objects_count = objects_count
 
     self.__history = { x: [] for x in range(objects_count) }
@@ -85,7 +85,6 @@ class SurveillanceObjectDispatcher:
 
 
   def on_domain_enter(self, object_snapshot, domain_id, timetick):
-    print(timetick)
     self.__logger.info(f"Object #{object_snapshot.id} entered domain:", domain_id, f"Timetick: {timetick}")
     node = self.__graph.get_node(domain_id)
 
