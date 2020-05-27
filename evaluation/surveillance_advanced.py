@@ -49,6 +49,7 @@ class Signal(Enum):
 class SmartSurveillanceNode(SimpleSurveillanceNode, Receiver):
   def __init__(self, id, dispatcher, target_objects=[]):
     super().__init__(id, dispatcher)
+    self.__logger = Logger(f"Surveillance_Node_#{id}")
     self.__prev_frame = []
     
     self.__targets = target_objects
@@ -83,15 +84,19 @@ class SmartSurveillanceNode(SimpleSurveillanceNode, Receiver):
           del self.__awaiting_objects[object_id]
     
     else:
+      self.__logger.info(f"Received message from {src}:", signal_type, object_id, timetick)
       
       if signal_type == Signal.OBJECT_LEFT_DOMAIN:
         if not math.isinf(self.get_weight(src).min_time):
           estimated_activation_time = timetick + self.get_weight(src).min_time - 1
           self.__awaiting_objects[object_id] = (src, estimated_activation_time)
+          self.__logger.info(f"Awaiting for object from {src}.", "Estimated act time:", estimated_activation_time)
+
       
       if signal_type == Signal.OBJECT_ENTERED_DOMAIN:
         for node_id in self.adjacent_nodes:
-          self.__sender.send(self.id, node_id, (Signal.CANCEL_WAITING, object_id, 0, training))
+          if node_id != src:
+            self.__sender.send(self.id, node_id, (Signal.CANCEL_WAITING, object_id, 0, training))
 
       if signal_type == Signal.CANCEL_WAITING:
         if object_id in self.__awaiting_objects.keys():
@@ -134,7 +139,9 @@ class SmartSurveillanceNode(SimpleSurveillanceNode, Receiver):
       weight_object.min_time = time_candidate
 
 
-  def __process_frame(self, frame, timetick):
+  def __process_frame(self, timetick):
+    frame = self.get_frame_content()
+
     incoming_objects = set(frame).difference(self.__prev_frame)
     outcoming_objects = set(self.__prev_frame).difference(frame)
 
@@ -155,28 +162,25 @@ class SmartSurveillanceNode(SimpleSurveillanceNode, Receiver):
           src_domain_id, _ = self.__awaiting_objects[object_id]
           self.__sender.send(self.id, src_domain_id, (Signal.OBJECT_ENTERED_DOMAIN, object_id, timetick, False))
         else:
-          print('Not expectable object in frame') 
+          pass
+          # print('Non-expectable object in frame') 
 
     self._dispatcher.on_process_frame((self.id, self.observed_domain.id), timetick, detected_objects)
+    self.__prev_frame = frame
 
 
-  def __current_activation_tasks(self, timetick):
+  def __relevant_activation_tasks(self, timetick):
     res = []
     for object_id in self.__awaiting_objects.keys():
       _, estimated_activation_time = self.__awaiting_objects[object_id]
-      if estimated_activation_time == timetick:
+      if estimated_activation_time <= timetick:
         res.append(object_id)
     return res
 
 
   def __on_inference_timetick(self, timetick):
-    frame = self.get_frame_content()
-
     if self._active:
-      self.__process_frame(frame, timetick)
-
-
-    self.__prev_frame = frame
+      self.__process_frame(timetick)
 
 
   def on_timetick(self, timetick, training=True):
@@ -187,10 +191,13 @@ class SmartSurveillanceNode(SimpleSurveillanceNode, Receiver):
 
   
   def update_active_status(self, timetick):
-    current_activation_tasks = self.__current_activation_tasks(timetick)
+    current_activation_tasks = self.__relevant_activation_tasks(timetick)
     if len(current_activation_tasks) == 0 and len(self.get_frame_content()) == 0 :
+      self.__logger.info(f"Deactivating due to the absense of relevant tasks", current_activation_tasks, "timetick:", timetick)
       self._active = False
+      self.__prev_frame = []
     else:
+      self.__logger.info(f'Activating [timetick={timetick}]', current_activation_tasks)
       self._active = True
 
 

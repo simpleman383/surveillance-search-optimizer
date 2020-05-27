@@ -5,6 +5,7 @@ from .tasking import TaskStack, TaskType
 from .dispatching import SurveillanceObjectDispatcher, DispatchingInfo
 from .coordinate import Coordinates
 from numpy import random
+import copy
 
 class State(Enum):
   IDLE = 0,
@@ -79,6 +80,8 @@ class SurveillanceObject:
     self.__state = State.MOVING
     self.__speed = self.__average_speed
     self.__route, _ = self.__dispatcher.get_route(self.__coordinates, self.current_task.destination)
+    self.__logger.info("Short path calculated:", [ n.id for n in self.__route ])
+
   
 
   def __on_domain_reached(self, domain_id, timetick):
@@ -95,7 +98,7 @@ class SurveillanceObject:
 
   
   def __process_wait(self):
-    return self.__coordinates
+    return copy.deepcopy(self.__coordinates)
 
 
   def __process_move(self, timetick):
@@ -109,7 +112,7 @@ class SurveillanceObject:
     current_domain, current_offset = self.__coordinates.get()
 
     if current_offset == 0:
-      self.__dispatcher.on_domain_leave(self.snapshot, current_domain)
+      self.__dispatcher.on_domain_leave(self.snapshot, current_domain, timetick)
       self.__logger.info(f'Estimated distance to domain {target_node.id}:', distance)
 
     next_offset = current_offset + (self.__speed * self.__time_step)
@@ -131,8 +134,8 @@ class SurveillanceObject:
     
     if self.__state == State.MOVING:
       self.__coordinates = self.__process_move(timetick)
+      self.__logger.info(f"Timetick: {timetick}", 'Coordinates changed:', self.__coordinates.domain, self.__coordinates.offset)
 
-    self.__logger.info(f"Timetick: {timetick}", 'Coordinates changed:', self.__coordinates.domain, self.__coordinates.offset)
 
     if self.current_task.completed(self.__coordinates, timetick):
       self.__logger.info('Task completed', f'Current domain: {self.__coordinates.domain}')

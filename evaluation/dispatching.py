@@ -61,7 +61,6 @@ class SurveillanceObjectDispatcher:
 
   def get_route(self, src_coordinates, dest_coordinates):
     route_info = self.__find_path(src_coordinates, dest_coordinates)
-    self.__logger.info("Short path calculated:", [ n.id for n in route_info[0] ])
     return route_info
 
 
@@ -74,8 +73,8 @@ class SurveillanceObjectDispatcher:
     return task
 
 
-  def on_domain_leave(self, object_snapshot, domain_id):
-    self.__logger.info(f"Object #{object_snapshot.id} left domain:", domain_id)
+  def on_domain_leave(self, object_snapshot, domain_id, timetick):
+    self.__logger.info(f"Object #{object_snapshot.id} left domain:", domain_id, f"Timetick: {timetick}")
     node = self.__graph.get_node(domain_id)
     
     if 'guests' in node.attribute.keys():
@@ -86,7 +85,8 @@ class SurveillanceObjectDispatcher:
 
 
   def on_domain_enter(self, object_snapshot, domain_id, timetick):
-    self.__logger.info(f"Object #{object_snapshot.id} entered domain:", domain_id)
+    print(timetick)
+    self.__logger.info(f"Object #{object_snapshot.id} entered domain:", domain_id, f"Timetick: {timetick}")
     node = self.__graph.get_node(domain_id)
 
     self.__history[object_snapshot.id].append((domain_id, timetick))

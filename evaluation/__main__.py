@@ -16,15 +16,15 @@ from evaluation import experiment_root_path
 class Experiment:
   def __init__(self):
     self.__timetick = 0
-    self.__time_limit = 1000
+    self.__time_limit = 100
     self.__time_step = 1
     self.__logger = Logger("Main")
 
-    self.__base_domain_graph_size = 4
+    self.__base_domain_graph_size = 3
     self.__base_domain_graph_min_distance = 10
     self.__base_domain_graph_max_distance = 100
 
-    self.__objects_count = 5
+    self.__objects_count = 1
     self.__object_speed_exp = 10
     self.__motion_probability = .5
 
@@ -33,7 +33,7 @@ class Experiment:
     self.__transition_probabilities_distribution = TransitionType.GEOMETRIC_MONOPOLAR
 
     self.__surveillance_nodes_ratio = 1
-    self.__surveillance_target_count = 5
+    self.__surveillance_target_count = 1
 
     self.__setup_conditions()
     self.print_conditions()
@@ -141,6 +141,9 @@ class Experiment:
         surveillance_object.on_timetick(self.__timetick)
 
       self.__timetick += self.__time_step
+
+
+    self.__surveillance.on_timetick(self.__timetick)
    
     self.__logger.info("Experiment finished")
 
@@ -148,6 +151,9 @@ class Experiment:
     self.__logger.info("Real movements:", self.__movement_dispatcher.get_history_formatted(), '\n\n')
     self.__logger.info("Base model history:", self.__reference_surveillance.get_history_formatted(), '\n\n')
     self.__logger.info("Advanced model history:", self.__surveillance.get_history_formatted(), '\n\n')
+
+    print(self.__movement_dispatcher.get_history_formatted())
+    print(self.__surveillance.get_history_formatted())
 
     acc_reference = sum([ x['Frames processed'] for x in self.__reference_surveillance.resource_statistic.values() ])
     acc = sum([ x['Frames processed'] for x in self.__surveillance.resource_statistic.values() ])
