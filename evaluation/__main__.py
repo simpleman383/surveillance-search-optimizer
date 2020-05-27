@@ -16,7 +16,8 @@ from evaluation import experiment_root_path
 class Experiment:
   def __init__(self):
     self.__timetick = 0
-    self.__time_limit = 100
+    self.__train_time_limit = 10000
+    self.__inference_time_limit = 100
     self.__time_step = 1
     self.__logger = Logger("Main")
 
@@ -42,6 +43,10 @@ class Experiment:
   def print_conditions(self):
     print("Starting experiment")
     print("Parameters")
+    print("Timetick step:", self.__time_step)
+    print("Timetick training limit:", self.__train_time_limit)
+    print("Timetick inference limit:", self.__inference_time_limit)
+    print("-----------------------------")
     print("Domain graph size:", self.__base_domain_graph_size)
     print("Domain graph min distance:", self.__base_domain_graph_min_distance)
     print("Domain graph max distance:", self.__base_domain_graph_max_distance)
@@ -104,7 +109,7 @@ class Experiment:
     self.__timetick = 0
     self.__surveillance.set_training_mode(True)
     
-    while self.__timetick < self.__time_limit:
+    while self.__timetick < self.__train_time_limit:
       self.__surveillance.on_timetick(self.__timetick)
 
       for surveillance_object in self.__surveillance_objects:
@@ -133,7 +138,7 @@ class Experiment:
 
     self.__surveillance.set_training_mode(False)
 
-    while self.__timetick < self.__time_limit:
+    while self.__timetick < self.__inference_time_limit:
       self.__surveillance.on_timetick(self.__timetick)
       self.__reference_surveillance.on_timetick(self.__timetick)
 

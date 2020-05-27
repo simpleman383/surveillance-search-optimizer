@@ -18,6 +18,10 @@ class GraphNode:
   def set_weight(self, weight, adjacment_node_id):
     self._adjacency_edge_weights[adjacment_node_id] = weight
 
+  def del_weight(self, adjacment_node_id):
+    if adjacment_node_id in self._adjacency_edge_weights.keys():
+      del self._adjacency_edge_weights[adjacment_node_id]
+
   @property
   def id(self):
     return self._id
@@ -85,6 +89,33 @@ class Graph:
     self._adjacency[self.size] = set()
     return self
 
+  def delete_node(self, node_id):
+    target_node = self.get_node(node_id)
+    adjacent_nodes = self.adjacent_nodes(node_id)
+
+    if len(adjacent_nodes) > 1:
+      for x in range(0, len(adjacent_nodes)):
+        for y in range(x + 1, len(adjacent_nodes)):
+          node_a = adjacent_nodes[x]
+          node_b = adjacent_nodes[y]
+          candidate_weight = target_node.get_weight(node_a) + target_node.get_weight(node_b)
+
+          if self.contains_edge(node_a.id, node_b.id):
+            orig_weight = node_a.get_weight(node_b.id)
+            if candidate_weight < orig_weight:
+              node_a.set_weight(candidate_weight, node_b.id)
+              node_b.set_weight(candidate_weight, node_a.id)
+          else:
+            self.add_edge(node_a, node_b, weight=candidate_weight)
+
+    for adjacent_node in adjacent_nodes:
+      adjacent_node.del_weight(node_id)
+      self._adjacency[adjacent_node.id].remove(target_node)
+    del self._adjacency[node_id]
+    del self._nodes[node_id]
+
+
+
   def get_node(self, id):
     return self._nodes[id] if id in self else None
 
@@ -140,6 +171,7 @@ class Graph:
 
   def __repr__(self):
     return self.__str__()
+
 
 
 class GraphCategory(IntFlag):

@@ -1,5 +1,6 @@
 import math
 import random 
+import copy
 
 from abc import ABC, abstractmethod
 from enum import Enum
@@ -38,6 +39,30 @@ class SpatioTemporalSurveillanceGraph(Graph):
   def __init__(self, size, dispatcher, supervised_object_ids):
     self._nodes = { x: SmartSurveillanceNode(x, dispatcher, target_objects=supervised_object_ids) for x in range(0, size) }
     self._adjacency = { x: set() for x in range(0, size) }
+
+  @staticmethod
+  def from_domain_graph(domain_graph, dispatcher, supervised_object_ids):
+    target_size = domain_graph.size
+    domain_graph_nodes = list(domain_graph.nodes)
+
+    result_graph = SpatioTemporalSurveillanceGraph(target_size, dispatcher, supervised_object_ids)
+    
+    for idx in range(0, target_size):
+      surveillance_node = result_graph.get_node(idx)
+      surveillance_node.set_observed_domain(domain_graph_nodes[idx])
+
+    for x in range(0, result_graph.size):
+      for y in range(x + 1, result_graph.size):
+        node_a = result_graph.get_node(x).observed_domain
+        node_b = result_graph.get_node(y).observed_domain
+
+        if domain_graph.contains_edge(node_a.id, node_b.id):
+          w = node_a.get_weight(node_b.id)
+          weight_set = EdgeWeightSet(w, 0, 0)
+          result_graph.add_edge(x, y, weight=weight_set)
+
+    return result_graph          
+
 
 
 class Signal(Enum):
@@ -212,7 +237,7 @@ class SpatioTemporalSurveillance:
 
     self.__training = False
     self._dispatcher = SurveillanceDispatcher(targets=supervised_object_ids)
-    self._surveillance_graph = self.__build_surveillance_graph(domain_graph, alpha, self._dispatcher, supervised_object_ids)
+    self._surveillance_graph = self.__build_surveillance_graph_improved(domain_graph, alpha, self._dispatcher, supervised_object_ids)
 
     network = Network.establish(self._surveillance_graph.nodes)
     for node in self._surveillance_graph.nodes:
@@ -257,6 +282,31 @@ class SpatioTemporalSurveillance:
 
 
 
+  def __build_surveillance_graph_improved(self, domain_graph, alpha, dispatcher, supervised_object_ids):
+    if alpha <= 0 or alpha > 1:
+      raise SurveillanceError("alpha should be between 0 and 1")
+
+    surveillance_size = math.ceil(alpha * domain_graph.size)
+    domain_graph_nodes = list(domain_graph.nodes)
+    random.shuffle(domain_graph_nodes)
+
+    deleted_nodes = domain_graph_nodes[surveillance_size : 0]
+
+    editable_graph = copy.deepcopy(domain_graph)
+    for node in deleted_nodes:
+      editable_graph.deleted_node(node.id)
+
+    surveillance_graph = SpatioTemporalSurveillanceGraph.from_domain_graph(editable_graph, dispatcher, supervised_object_ids)
+
+    for idx in range(0, surveillance_size):
+      surveillance_node = surveillance_graph.get_node(idx)
+      observed_domain_id = surveillance_node.observed_domain.id
+      surveillance_node.set_observed_domain(domain_graph.get_node(observed_domain_id))
+
+    return surveillance_graph
+
+
+  # too slow...
   def __build_surveillance_graph(self, domain_graph, alpha, dispatcher, supervised_object_ids):
     if alpha <= 0 or alpha > 1:
       raise SurveillanceError("alpha should be between 0 and 1")
